@@ -1,18 +1,25 @@
 import os
 import time
 from neo4j import GraphDatabase
+from neontology import init_neontology
 
 
 class Neo4jConnection:
     def __init__(self, retries=5):
-        uri = os.getenv("NEO4J_URI", "bolt://neo4j:7687")
-        user = os.getenv("NEO4J_USER", "neo4j")
-        password = os.getenv("NEO4J_PASSWORD", "test1234")
+        uri = os.getenv("NEO4J_URI")
+        user = os.getenv("NEO4J_USER")
+        pwd = os.getenv("NEO4J_PASSWORD")
+
+        init_neontology(
+            neo4j_uri=uri,
+            neo4j_username=user,
+            neo4j_password=pwd
+        )
 
         # Retry connection
         for i in range(retries):
             try:
-                self._driver = GraphDatabase.driver(uri, auth=(user, password))
+                self._driver = GraphDatabase.driver(uri, auth=(user, pwd))
                 # Try to open a session to verify the connection
                 with self._driver.session() as session:
                     session.run("RETURN 1")
