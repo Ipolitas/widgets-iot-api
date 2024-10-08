@@ -1,71 +1,30 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.encoders import jsonable_encoder
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from .models import WidgetNode
-from .db import Neo4jConnection
-from typing import ClassVar, Optional, List
-from neontology import BaseNode, BaseRelationship
+
+from .exception_handlers import validation_exception_handler, http_exception_handler
+from .db import establish_connection
+from .widget_routes import router as widget_router
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize Neo4j connection
+    uri = os.getenv("NEO4J_URI")
+    user = os.getenv("NEO4J_USER")
+    pwd = os.getenv("NEO4J_PASSWORD")
+    establish_connection(uri, user, pwd)
+    yield
 
 
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request,
-                                       exc: RequestValidationError):
-    return JSONResponse(
-        status_code=422,
-        content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
-    )
+app = FastAPI(lifespan=lifespan)
+
+# Register exception handlers
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail},
-    )
-
-# Initialize Neo4j connection
-conn = Neo4jConnection()
-
-
-class FollowsRel(BaseRelationship):
-    __relationshiptype__: ClassVar[str] = "FOLLOWS"
-
-    source: WidgetNode
-    target: WidgetNode
-
-
-@app.get("/")
-def read_root():
-    res = conn.query("MATCH (n) RETURN COUNT(n) as count")
-    return {"node_count": res[0]["count"]}
-
-
-@app.post("/widgets/")
-async def add_widget(name: str, ports: str = ""):
-    widget = WidgetNode(
-        name=name,
-        ports=ports
-        )
-    widget.create()
-    return widget
-
-
-@app.post("/tester/")
-async def run_test():
-    alice = WidgetNode(name="Motion Sensor")
-    bob = WidgetNode(name="Speaker")
-
-    alice.create()
-    bob.create()
-
-    return "done"
-
-
-# Close the connection on shutdown
-@app.on_event("shutdown")
-def shutdown():
-    conn.close()
+# Include the router
+app.include_router(widget_router)

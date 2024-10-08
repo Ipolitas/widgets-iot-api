@@ -1,5 +1,5 @@
 from fastapi.exceptions import RequestValidationError
-from neontology import BaseNode
+from neontology import BaseNode, BaseRelationship
 from pydantic import Field, field_validator
 from typing import ClassVar
 import uuid
@@ -26,3 +26,10 @@ class WidgetNode(BaseNode):
     @staticmethod
     def is_port_supported(port: str) -> bool:
         return all(p in "PRQ" for p in port)
+
+
+class ConnectedRel(BaseRelationship):
+    __relationshiptype__: ClassVar[str] = "CONNECTED"
+
+    source: WidgetNode
+    target: WidgetNode
