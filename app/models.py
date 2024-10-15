@@ -5,6 +5,26 @@ from typing import ClassVar
 import uuid
 
 
+MAX_PORTS_PER_WIDGET = 3
+MAX_PORT_PER_CONNECTION = 1
+
+
+@staticmethod
+def validate_is_port_supported(port: str) -> None:
+    if not all(p in "PRQ" for p in port):
+        raise RequestValidationError("Port not supported. " +
+                                     "Must be one of 'P', 'R', or 'Q'.")
+    return port
+
+
+@staticmethod
+def validate_port_max_constraint(ports: str, max_count: int) -> None:
+    port_count = len(ports)
+    if port_count > max_count:
+        raise RequestValidationError(
+            f"Maximum amount of ports allowed: {max_count}. You have {port_count} ports.")
+
+
 class WidgetNode(BaseNode):
     __primarylabel__: ClassVar[str] = "Widget"
     __primaryproperty__: ClassVar[str] = "serial_number"
@@ -14,18 +34,11 @@ class WidgetNode(BaseNode):
     ports: str
 
     @field_validator('ports')
-    def validate_ports(cls, v):
-        if len(v) > 3:
-            raise RequestValidationError(
-                "A widget can have at most 3 connection ports")
-        if not cls.is_port_supported(v):
-            raise RequestValidationError(
-                "A widget can only have ports P, R, or Q")
+    @classmethod
+    def validate_ports(cls, v: str):
+        validate_port_max_constraint(v, MAX_PORTS_PER_WIDGET)
+        validate_is_port_supported(v)
         return v
-
-    @staticmethod
-    def is_port_supported(port: str) -> bool:
-        return all(p in "PRQ" for p in port)
 
 
 class ConnectedRel(BaseRelationship):
@@ -33,3 +46,11 @@ class ConnectedRel(BaseRelationship):
 
     source: WidgetNode
     target: WidgetNode
+    port: str
+
+    @field_validator('port')
+    @classmethod
+    def validate_ports(cls, v: str):
+        validate_port_max_constraint(v, MAX_PORT_PER_CONNECTION)
+        validate_is_port_supported(v)
+        return v

@@ -4,9 +4,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 
-from .exception_handlers import validation_exception_handler, http_exception_handler
+from .handlers import validation_exception_handler, http_exception_handler
 from .db import establish_connection
-from .widget_routes import router as widget_router
+from .endpoints import router as widget_router
 
 
 @asynccontextmanager

@@ -11,6 +11,12 @@ class WidgetCreateRequest(BaseModel):
     ports: str = ""
 
 
+@router.get("/{serial_number}")
+async def get_widget(serial_number: str) -> WidgetNode:
+    widget = WidgetNode.match(serial_number)
+    return widget
+
+
 @router.post("/")
 async def add_widget(widget_request: WidgetCreateRequest) -> WidgetNode:
     widget = WidgetNode(
@@ -18,12 +24,6 @@ async def add_widget(widget_request: WidgetCreateRequest) -> WidgetNode:
         ports=widget_request.ports
     )
     widget.create()
-    return widget
-
-
-@router.get("/{serial_number}")
-async def get_widget(serial_number: str) -> WidgetNode:
-    widget = WidgetNode.match(serial_number)
     return widget
 
 
