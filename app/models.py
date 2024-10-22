@@ -22,7 +22,14 @@ def validate_port_max_constraint(ports: str, max_count: int) -> None:
     port_count = len(ports)
     if port_count > max_count:
         raise RequestValidationError(
-            f"Maximum amount of ports allowed: {max_count}. You have {port_count} ports.")
+            f"Maximum # of ports allowed: {max_count}. You have {port_count}.")
+
+
+@staticmethod
+def validate_ports_compatibility(source: 'WidgetNode', target: 'WidgetNode', port: str) -> None:
+    if port not in source.ports or port not in target.ports:
+        raise RequestValidationError(
+            f"Port {port} is not supported by both widgets.")
 
 
 class WidgetNode(BaseNode):
@@ -34,7 +41,6 @@ class WidgetNode(BaseNode):
     ports: str
 
     @field_validator('ports')
-    @classmethod
     def validate_ports(cls, v: str):
         validate_port_max_constraint(v, MAX_PORTS_PER_WIDGET)
         validate_is_port_supported(v)
@@ -49,8 +55,11 @@ class ConnectedRel(BaseRelationship):
     port: str
 
     @field_validator('port')
-    @classmethod
-    def validate_ports(cls, v: str):
+    def validate_ports(cls, v: str, values):
+        source = values.data['source']
+        target = values.data['target']
+
         validate_port_max_constraint(v, MAX_PORT_PER_CONNECTION)
         validate_is_port_supported(v)
+        validate_ports_compatibility(source, target, v)
         return v
