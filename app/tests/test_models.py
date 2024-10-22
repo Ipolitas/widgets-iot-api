@@ -1,15 +1,15 @@
 from fastapi.exceptions import RequestValidationError
 import pytest
-from app.models import ConnectedRel, WidgetNode
+from app.models import ConnectedRel, Widget
 
 
-class TestWidgetNodeModel:
+class TestWidgetModel:
 
     WIDGET_NAME = "Test Widget"
 
     @pytest.mark.parametrize("ports", ["", "P", "R", "Q", "PR", "QQ", "PRQ", "PPP"])
     def test_widget_node_creation(self, ports: str):
-        widget = WidgetNode(
+        widget = Widget(
             name=self.WIDGET_NAME,
             ports=ports
         )
@@ -20,7 +20,7 @@ class TestWidgetNodeModel:
     def test_widget_node_creation_with_invalid_ports(self, ports: str):
         expected_msg = "Port not supported. Must be one of 'P', 'R', or 'Q'."
         with pytest.raises(RequestValidationError, match=expected_msg):
-            WidgetNode(
+            Widget(
                 name=self.WIDGET_NAME,
                 ports=ports
             )
@@ -32,7 +32,7 @@ class TestWidgetNodeModel:
         expected_msg = f"Maximum # of ports allowed: {max_count}. You have {port_count}."
 
         with pytest.raises(RequestValidationError, match=expected_msg):
-            WidgetNode(
+            Widget(
                 name=self.WIDGET_NAME,
                 ports=ports
             )
@@ -42,14 +42,14 @@ class TestConnectedRelModel:
 
     @pytest.fixture
     def widget_nodes_compatible(self):
-        widget1 = WidgetNode(name="Widget 1", ports="PRQ")
-        widget2 = WidgetNode(name="Widget 2", ports="R")
+        widget1 = Widget(name="Widget 1", ports="PRQ")
+        widget2 = Widget(name="Widget 2", ports="R")
         return widget1, widget2
 
     @pytest.fixture
     def widget_nodes_uncompatible(self):
-        widget1 = WidgetNode(name="Widget 1", ports="PQ")
-        widget2 = WidgetNode(name="Widget 2", ports="R")
+        widget1 = Widget(name="Widget 1", ports="PQ")
+        widget2 = Widget(name="Widget 2", ports="R")
         return widget1, widget2
 
     def _create_connection(self, widget1, widget2, port):

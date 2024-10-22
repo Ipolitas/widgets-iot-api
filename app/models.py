@@ -1,8 +1,6 @@
 from fastapi.exceptions import RequestValidationError
-from neontology import BaseNode, BaseRelationship
-from pydantic import Field, field_validator
-from typing import ClassVar
-import uuid
+from neomodel import (StructuredNode, StructuredRel, UniqueIdProperty,
+                      StringProperty, RelationshipTo)
 
 
 MAX_PORTS_PER_WIDGET = 3
@@ -26,40 +24,36 @@ def validate_port_max_constraint(ports: str, max_count: int) -> None:
 
 
 @staticmethod
-def validate_ports_compatibility(source: 'WidgetNode', target: 'WidgetNode', port: str) -> None:
+def validate_ports_compatibility(source: 'Widget', target: 'Widget', port: str) -> None:
     if port not in source.ports or port not in target.ports:
         raise RequestValidationError(
             f"Port {port} is not supported by both widgets.")
 
 
-class WidgetNode(BaseNode):
-    __primarylabel__: ClassVar[str] = "Widget"
-    __primaryproperty__: ClassVar[str] = "serial_number"
+class ConnectedRel(StructuredRel):
+    __relationshiptype__ = "CONNECTED_TO"
+    port = StringProperty(required=True)
 
-    serial_number: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    ports: str
+    def save(self, *args, **kwargs):
+        validate_port_max_constraint(self.port, MAX_PORTS_PER_WIDGET)
+        validate_is_port_supported(self.port)
+        validate_ports_compatibility(self.source, self.target, self.port)
 
-    @field_validator('ports')
-    def validate_ports(cls, v: str):
-        validate_port_max_constraint(v, MAX_PORTS_PER_WIDGET)
-        validate_is_port_supported(v)
-        return v
+        return super().save(*args, **kwargs)
 
 
-class ConnectedRel(BaseRelationship):
-    __relationshiptype__: ClassVar[str] = "CONNECTED"
+class Widget(StructuredNode):
+    __primarylabel__ = "Widget"
+    __primaryproperty__ = "serial_number"
 
-    source: WidgetNode
-    target: WidgetNode
-    port: str
+    serial_number = UniqueIdProperty()
+    name = StringProperty(required=True)
+    ports = StringProperty(required=True)
+    # TODO: Optimization -> might want to use AsyncRelationshipTo instead
+    conn_widgets = RelationshipTo("Widget", "CONNECTED_TO", model=ConnectedRel)
 
-    @field_validator('port')
-    def validate_ports(cls, v: str, values):
-        source = values.data['source']
-        target = values.data['target']
+    def save(self, *args, **kwargs):
+        validate_port_max_constraint(self.ports, MAX_PORTS_PER_WIDGET)
+        validate_is_port_supported(self.ports)
 
-        validate_port_max_constraint(v, MAX_PORT_PER_CONNECTION)
-        validate_is_port_supported(v)
-        validate_ports_compatibility(source, target, v)
-        return v
+        return super().save(*args, **kwargs)

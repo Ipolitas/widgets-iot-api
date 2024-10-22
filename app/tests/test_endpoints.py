@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.endpoints import router
-from app.models import WidgetNode
+from app.models import Widget
 
 client = TestClient(router)
 
@@ -12,17 +12,17 @@ PORTS = "QP"
 
 @pytest.fixture
 def mock_widget_node(mocker):
-    mocker.patch.object(WidgetNode, 'match', return_value={
+    mocker.patch.object(Widget, 'match', return_value={
         "name": NAME,
         "ports": PORTS,
         "serial_number": SERIAL_NUMBER
     })
 
-    return WidgetNode
+    return Widget
 
 
 def test_add_widget(mocker):
-    mock_create = mocker.patch.object(WidgetNode, 'create', return_value=None)
+    mock_create = mocker.patch.object(Widget, 'create', return_value=None)
 
     payload = {
         "name": NAME,
@@ -48,7 +48,7 @@ def test_get_widget(mock_widget_node):
 
 
 def test_remove_widget(mocker):
-    mock_delete = mocker.patch.object(WidgetNode, 'delete', return_value=None)
+    mock_delete = mocker.patch.object(Widget, 'delete', return_value=None)
 
     response = client.delete(f"/widgets/{SERIAL_NUMBER}")
 

@@ -3,8 +3,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
+from neomodel import NeomodelException
+from .handlers import validation_exception_handler, http_exception_handler, neomodel_exception_handler
 
-from .handlers import validation_exception_handler, http_exception_handler
 from .db import establish_connection
 from .endpoints import router as widget_router
 
@@ -24,6 +25,7 @@ app = FastAPI(lifespan=lifespan)
 # Register exception handlers
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(NeomodelException, neomodel_exception_handler)
 
 
 # Include the router
