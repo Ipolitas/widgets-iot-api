@@ -13,6 +13,4 @@ class WidgetResponse(BaseModel):
 
 
 class ConnectedRelResponse(BaseModel):
-    source: WidgetResponse
-    target: WidgetResponse
     port: str = ""

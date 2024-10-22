@@ -24,22 +24,25 @@ def validate_port_max_constraint(ports: str, max_count: int) -> None:
 
 
 @staticmethod
-def validate_ports_compatibility(source: 'Widget', target: 'Widget', port: str) -> None:
-    if port not in source.ports or port not in target.ports:
+def validate_port_compatibility(widget: 'Widget', port: str) -> None:
+    if port not in widget.ports:
         raise RequestValidationError(
-            f"Port {port} is not supported by both widgets.")
+            f"Port {port} is not supported by widget {widget.serial_number}")
+
+
+@staticmethod
+def validate_port_open(widget: 'Widget', port: str) -> None:
+    busy_port_count = len(widget.conn_widgets.match(port=port))
+    total_port_count = widget.ports.count(port)
+
+    open_port_count = total_port_count - busy_port_count
+    if open_port_count <= 0:
+        raise RequestValidationError(f"No available ports of type '{port}' for widget id {widget.serial_number}.")
 
 
 class ConnectedRel(StructuredRel):
     __relationshiptype__ = "CONNECTED_TO"
     port = StringProperty(required=True)
-
-    def save(self, *args, **kwargs):
-        validate_port_max_constraint(self.port, MAX_PORTS_PER_WIDGET)
-        validate_is_port_supported(self.port)
-        validate_ports_compatibility(self.source, self.target, self.port)
-
-        return super().save(*args, **kwargs)
 
 
 class Widget(StructuredNode):
@@ -52,8 +55,12 @@ class Widget(StructuredNode):
     # TODO: Optimization -> might want to use AsyncRelationshipTo instead
     conn_widgets = RelationshipTo("Widget", "CONNECTED_TO", model=ConnectedRel)
 
-    def save(self, *args, **kwargs):
+    def pre_save(self):
         validate_port_max_constraint(self.ports, MAX_PORTS_PER_WIDGET)
         validate_is_port_supported(self.ports)
 
-        return super().save(*args, **kwargs)
+    def validate_on_connect(self, port):
+        validate_port_max_constraint(port, MAX_PORT_PER_CONNECTION)
+        validate_is_port_supported(port)
+        validate_port_compatibility(self, port)
+        validate_port_open(self, port)
